@@ -1,0 +1,131 @@
+<?php
+/**
+ * @file
+ * Contains install and update functions for the Text CAPTCHA module.
+ */
+
+ /**
+  * Implements hook_install().
+  */
+function textcaptcha_install() {
+  $t = get_t();
+  $text = $t('To set up textCAPTCHA get an API key !here. Then go to the admin
+  configuration page !admin to save your key and retrieve some challenge
+  questions.',
+    array(
+      '!here' => $t(l('here', 'http://textcaptcha.com/')),
+      '!admin' => $t(l('here', 'admin/config/people/captcha/textcaptcha')),
+    )
+  );
+  drupal_set_message($text, 'warning');
+}
+
+ /**
+  * Implements hook_uninstall().
+  */
+function textcaptcha_uninstall() {
+  variable_del('textcaptcha_question_count');
+  variable_del('textcaptcha_challenge_description');
+  variable_del('textcaptcha_api_key');
+  variable_del('textcaptcha_cron');
+  variable_del('textcaptcha_question_limit');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function textcaptcha_schema() {
+  $schema['textcaptcha_answers'] = array(
+    'description' => 'TODO: please describe this table!',
+    'fields' => array(
+      'aid' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'qid' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+      'answer' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+      'created' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('aid'),
+  );
+
+  $schema['textcaptcha_questions'] = array(
+    'description' => 'TODO: please describe this table!',
+    'fields' => array(
+      'qid' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'question' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+      'created' => array(
+        'description' => 'TODO: please describe this field!',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('qid'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function textcaptcha_update_7001() {
+  // Update captcha limit. There was a bug, restricting cache limit to 0, 1, 2,
+  // 3, or 4 (when users were selecting 0, 10, 20, 30, 40).
+  $limit = variable_get('textcaptcha_cache_limit', 0);
+  switch ($limit) {
+    case 0:
+    case 1:
+      variable_set('textcaptcha_cache_limit', 10);
+      break;
+
+    case 2:
+      variable_set('textcaptcha_cache_limit', 20);
+      break;
+
+    case 3:
+      variable_set('textcaptcha_cache_limit', 30);
+      break;
+
+    case 4:
+      variable_set('textcaptcha_cache_limit', 40);
+      break;
+  }
+
+  // Populate cache with some challenges.
+  for ($i = 0; $i < 10; $i++) {
+    if ($challenge = textcaptcha_get_new_challenge()) {
+      textcaptcha_cache_new_challenge($challenge);
+    }
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Install new schema for textcaptcha database tables.
+ */
+function textcaptcha_update_7002() {
+  drupal_install_schema('textcaptcha');
+}
